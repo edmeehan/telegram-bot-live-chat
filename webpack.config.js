@@ -18,14 +18,9 @@ const webpackCleanPlugin = new WebpackCleanPlugin([
 // Client entrypoints:
 const clientEntrypoints = [
   {
-    name: "CLIENT - main dialog",
-    entry: "./src/client/main.jsx",
-    filename: "main.html"
-  },
-  {
-    name: "CLIENT - about sidebar",
-    entry: "./src/client/about.jsx",
-    filename: "about.html"
+    name: "Testing Admin",
+    entry: "./src/client/index.jsx",
+    filename: "index.html"
   },
 ];
 
