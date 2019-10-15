@@ -1,5 +1,8 @@
-const chat = '-384518148';
-const sendMessage = 'https://api.telegram.org/bot925329822:AAF3dbV18FV7Q54IbpRpZ7S6c31iaxWqjmQ/sendMessage';
+import {telegramChatId, telegramKey} from './../config';
+
+const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+
+const sendMessage = `https://api.telegram.org/bot${telegramKey}/sendMessage`;
 
 const doGet = (e) => {
   // responde back to app
@@ -8,50 +11,86 @@ const doGet = (e) => {
     .setMimeType(ContentService.MimeType.JSON);
 };
 
-const test = () => {
-  doPost({queryString: 'postMessage', parameter: {message: 'This is my test message'}});
-};
-
 const doPost = (data) => {
   const {queryString, postData, parameter} = data;
 
-  if (queryString === 'postMessage') {
-    webUserMessage(parameter);
+  if (queryString === 'initChat') {
+    const id = initChat();
+
     return ContentService
-      .createTextOutput(JSON.stringify(data))
+      .createTextOutput(JSON.stringify({id}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (queryString === 'postMessage') {
+    const response = postMessage(parameter);
+
+    return ContentService
+      .createTextOutput(response)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (queryString === 'polling') {
+    const query = polling(parameter);
+
+    return ContentService
+      .createTextOutput(JSON.stringify(query))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   if (queryString === 'telegramWebHook') {
-    telegramClientMessage(postData);
+    telegramWebHook(postData);
   }
 };
 
-const webUserMessage = (data) => {
-  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = spreadSheet.getSheetByName('Sheet1');
-  sheet.appendRow([JSON.stringify(data)]);
+const polling = ({id}) => {
+  const sheet = spreadSheet.getSheetByName(id);
+  const range = sheet.getDataRange();
+  return {messages: range.getValues()};
+};
 
-  const test = UrlFetchApp.fetch(sendMessage, {
-    method: 'post',
-    muteHttpExceptions: true,
-    payload: {
-      chat_id: chat,
-      text: data.message,
-    },
-  });
-  for(i in test) {
-    Logger.log(i + ": " + test[i]);
+const postMessage = ({id, message}) => {
+  if (message) {
+    const sheet = spreadSheet.getSheetByName(id);
+    sheet.appendRow([message, 'user']);
+
+    return UrlFetchApp.fetch(sendMessage, {
+      method: 'post',
+      payload: {
+        chat_id: telegramChatId,
+        text: `/${id} ${message}`,
+      },
+    });
   }
 };
 
-const telegramClientMessage = (data) => {
-  const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = spreadSheet.getSheetByName('Sheet1');
-  sheet.appendRow([JSON.stringify(data)]);
+const initChat = () => {
+  const value = ((new Date().getTime()) + '_' + Math.floor(Math.random() * 10000));
+  spreadSheet.insertSheet(value, 1);
+  return value;
+};
+
+const telegramWebHook = ({contents}) => {
+  const data = JSON.parse(contents);
+  const {message: {entities, text, reply_to_message: reply}} = data;
+  let sheetName;
+  let message;
+  let sheet;
+
+  if (entities || reply) {
+    if (entities) {
+      sheetName = text.substring(1, entities[0].length);
+      message = text.substring(entities[0].length);
+    }
+    if (reply) {
+      sheetName = reply.text.substring(1, reply.entities[0].length);
+      message = text;
+    }
+    sheet = spreadSheet.getSheetByName(sheetName);
+    sheet.appendRow([message, 'me']);
+  }
 };
 
 // Expose public functions
 global.doGet = doGet;
 global.doPost = doPost;
-global.test = test;

@@ -1,0 +1,7 @@
+// telegram config
+
+const telegramChatId = '';
+
+const telegramKey = '';
+
+export { telegramChatId , telegramKey };
