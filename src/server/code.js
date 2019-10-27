@@ -1,24 +1,19 @@
-import {telegramChatId, telegramKey} from './../config';
+import {telegramChatId, telegramKey, daysOn, timeOn, welcomeMessage, closedMessage} from './../config';
 
 const spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
 
 const sendMessage = `https://api.telegram.org/bot${telegramKey}/sendMessage`;
 
-const doGet = (e) => {
-  // responde back to app
-  return ContentService
-    .createTextOutput(JSON.stringify({}))
-    .setMimeType(ContentService.MimeType.JSON);
-};
+const now = Date.now();
 
 const doPost = (data) => {
   const {queryString, postData, parameter} = data;
 
   if (queryString === 'initChat') {
-    const id = initChat();
+    const id = initChat(parameter);
 
     return ContentService
-      .createTextOutput(JSON.stringify({id}))
+      .createTextOutput(JSON.stringify(id))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -52,7 +47,7 @@ const polling = ({id}) => {
 const postMessage = ({id, message}) => {
   if (message) {
     const sheet = spreadSheet.getSheetByName(id);
-    sheet.appendRow([message, 'user']);
+    sheet.appendRow([message, 'user', now]);
 
     return UrlFetchApp.fetch(sendMessage, {
       method: 'post',
@@ -64,10 +59,25 @@ const postMessage = ({id, message}) => {
   }
 };
 
-const initChat = () => {
-  const value = ((new Date().getTime()) + '_' + Math.floor(Math.random() * 10000));
-  spreadSheet.insertSheet(value, 1);
-  return value;
+const initChat = ({id}) => {
+  const active = isActive();
+  let sheetName = id;
+  let sheet;
+
+  if (!sheetName) {
+    sheetName = ((new Date().getTime()) + '_' + Math.floor(Math.random() * 10000));
+    sheet = spreadSheet.insertSheet(sheetName, 1);
+  } else {
+    sheet = spreadSheet.getSheetByName(sheetName);
+  }
+
+  if (active) {
+    sheet.appendRow([welcomeMessage, 'me', now]);
+  } else {
+    sheet.appendRow([closedMessage, 'me', now]);
+  }
+
+  return {id: sheetName, active};
 };
 
 const telegramWebHook = ({contents}) => {
@@ -87,10 +97,22 @@ const telegramWebHook = ({contents}) => {
       message = text;
     }
     sheet = spreadSheet.getSheetByName(sheetName);
-    sheet.appendRow([message, 'me']);
+    sheet.appendRow([message, 'me', now]);
+  }
+};
+
+const isActive = () => {
+  const today = new Date();
+  if (
+    ~daysOn.indexOf(today.getDay())
+    && today.getHours() >= timeOn[0]
+    && today.getHours() < timeOn[1]
+  ) {
+    return true;
+  } else {
+    return false;
   }
 };
 
 // Expose public functions
-global.doGet = doGet;
 global.doPost = doPost;

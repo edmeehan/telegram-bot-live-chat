@@ -17,11 +17,11 @@ const webpackCleanPlugin = new WebpackCleanPlugin([
 
 // Client entrypoints:
 const clientEntrypoints = [
-  {
-    name: "Testing Admin",
-    entry: "./src/client/index.jsx",
-    filename: "index.html"
-  },
+  // {
+  //   name: "Testing Admin",
+  //   entry: "./src/client/index.jsx",
+  //   filename: "index.html"
+  // },
 ];
 
 const sharedConfigSettings = {
@@ -66,7 +66,8 @@ const appsscriptConfig = {
       {
         from: './appsscript.json'
       }
-    ])
+    ]),
+    webpackCleanPlugin,
   ]
 };
 
